@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Camp Moshava eMAR – Enhanced Toolbar
 // @namespace    http://campmoshava.org/
-// @version      2.2.2
+// @version      2.2
 // @description  Hide administered/unaccepted toggles, delivery time pills, Today date button
 // @match        https://system.campminder.com/*
 // @grant        GM_getValue
@@ -336,7 +336,7 @@
     const unacceptedCount = unacceptedBtn?.querySelector('.moshava-count');
     if (unacceptedCount) {
       const on = unacceptedBtn.classList.contains('active');
-      unacceptedCount.textContent = (on && unaccepted > 0) ? `(${unaccepted})` : '';
+      unacceptedCount.textContent = (on && pending > 0) ? `(${pending})` : '';
     }
   }
 
@@ -358,7 +358,7 @@
     if (savedCompleted) hideBtn.classList.add('active');
     const hideCount = document.createElement('span');
     hideCount.className = 'moshava-count';
-    hideBtn.append(document.createTextNode('Hide Administered '), hideCount);
+    hideBtn.append(document.createTextNode('Hide administered '), hideCount);
     hideBtn.addEventListener('click', () => {
       const on = hideBtn.classList.toggle('active');
       GM_setValue(STORAGE_KEY, on);
@@ -371,7 +371,7 @@
     if (savedUnaccepted) unacceptedBtn.classList.add('active');
     const unacceptedCount = document.createElement('span');
     unacceptedCount.className = 'moshava-count';
-    unacceptedBtn.append(document.createTextNode('Hide Unaccepted '), unacceptedCount);
+    unacceptedBtn.append(document.createTextNode('Hide unaccepted '), unacceptedCount);
     unacceptedBtn.addEventListener('click', () => {
       const on = unacceptedBtn.classList.toggle('active');
       GM_setValue(STORAGE_KEY_UNACCEPTED, on);
