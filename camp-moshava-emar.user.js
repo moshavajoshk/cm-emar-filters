@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Camp Moshava eMAR – Enhanced Toolbar
 // @namespace    http://campmoshava.org/
-// @version      2.1.1
-// @description  Hide completed/unapproved toggles, delivery time pills, Today date button
+// @version      2.2
+// @description  Hide administered/unaccepted toggles, delivery time pills, Today date button
 // @match        https://system.campminder.com/*
 // @grant        GM_getValue
 // @grant        GM_setValue
@@ -16,14 +16,14 @@
   'use strict';
 
   // ── Selectors & constants ──────────────────────────────────────────────────
-  const STORAGE_KEY         = 'moshavaEMar.hideCompleted';
-  const STORAGE_KEY_PENDING = 'moshavaEMar.hidePending';
+  const STORAGE_KEY         = 'moshavaEMar.hideAdministered';
+  const STORAGE_KEY_UNACCEPTED = 'moshavaEMar.hideUnaccepted';
 
   const HIDE_EMPTY_PERSONS       = true;
   const HIDE_EMPTY_MEAL_SECTIONS = true;
 
   const TAG_ADMINISTERED = 'data-moshava-administered';
-  const TAG_PENDING      = 'data-moshava-pending';
+  const TAG_UNACCEPTED      = 'data-moshava-unaccepted';
   const TAG_PERSON_EMPTY = 'data-moshava-person-empty';
   const TAG_MEAL_EMPTY   = 'data-moshava-meal-empty';
 
@@ -38,8 +38,8 @@
   // ── Styles ─────────────────────────────────────────────────────────────────
   const STYLE = `
     /* Individual medication hiding */
-    body.moshava-hide-completed [data-moshava-administered="true"] { display: none !important; }
-    body.moshava-hide-pending   [data-moshava-pending="true"]      { display: none !important; }
+    body.moshava-hide-administered [data-moshava-administered="true"] { display: none !important; }
+    body.moshava-hide-unaccepted   [data-moshava-unaccepted="true"]      { display: none !important; }
 
     /* Person/meal section collapse — fires when either toggle is active */
     body.moshava-hiding [data-moshava-person-empty="true"] { display: none !important; }
@@ -64,8 +64,8 @@
     }
 
     /* Shared pill base — high specificity to beat CampMinder's button resets */
-    #moshava-toolbar #moshava-hide-toggle,
-    #moshava-toolbar #moshava-hide-pending-toggle,
+    #moshava-toolbar #moshava-hide-administered-toggle,
+    #moshava-toolbar #moshava-hide-unaccepted-toggle,
     #moshava-toolbar .moshava-pill,
     #moshava-toolbar #moshava-today-btn {
       display: inline-flex !important;
@@ -87,26 +87,26 @@
     }
 
     /* Blue pills: hide toggles + delivery time pills */
-    #moshava-toolbar #moshava-hide-toggle,
-    #moshava-toolbar #moshava-hide-pending-toggle,
+    #moshava-toolbar #moshava-hide-administered-toggle,
+    #moshava-toolbar #moshava-hide-unaccepted-toggle,
     #moshava-toolbar .moshava-pill {
       border: 1.5px solid #2563eb !important;
       color: #2563eb !important;
     }
-    #moshava-toolbar #moshava-hide-toggle:hover,
-    #moshava-toolbar #moshava-hide-pending-toggle:hover,
+    #moshava-toolbar #moshava-hide-administered-toggle:hover,
+    #moshava-toolbar #moshava-hide-unaccepted-toggle:hover,
     #moshava-toolbar .moshava-pill:hover:not(.moshava-pill-custom) {
       background: #eff6ff !important;
     }
-    #moshava-toolbar #moshava-hide-toggle.active,
-    #moshava-toolbar #moshava-hide-pending-toggle.active,
+    #moshava-toolbar #moshava-hide-administered-toggle.active,
+    #moshava-toolbar #moshava-hide-unaccepted-toggle.active,
     #moshava-toolbar .moshava-pill.active {
       background: #2563eb !important;
       border-color: #2563eb !important;
       color: #fff !important;
     }
-    #moshava-toolbar #moshava-hide-toggle .moshava-count,
-    #moshava-toolbar #moshava-hide-pending-toggle .moshava-count {
+    #moshava-toolbar #moshava-hide-administered-toggle .moshava-count,
+    #moshava-toolbar #moshava-hide-unaccepted-toggle .moshava-count {
       font-size: 11px !important;
       font-weight: 400 !important;
     }
@@ -247,7 +247,7 @@
     return div ? window.getComputedStyle(div).display !== 'none' : false;
   }
 
-  function isModulePending(module) {
+  function isModuleUnaccepted(module) {
     // Pending medications have a <span>(pending)</span> inside .eMARMedicationLabel
     return [...module.querySelectorAll('.eMARMedicationLabel span')]
       .some(s => s.textContent.trim() === '(pending)');
@@ -255,19 +255,19 @@
 
   // ── Hide logic ─────────────────────────────────────────────────────────────
   function syncHidingClass() {
-    const either = document.body.classList.contains('moshava-hide-completed')
-                || document.body.classList.contains('moshava-hide-pending');
+    const either = document.body.classList.contains('moshava-hide-administered')
+                || document.body.classList.contains('moshava-hide-unaccepted');
     document.body.classList.toggle('moshava-hiding', either);
   }
 
   function applyToggle(on) {
-    document.body.classList.toggle('moshava-hide-completed', on);
+    document.body.classList.toggle('moshava-hide-administered', on);
     syncHidingClass();
     tagAll();
   }
 
-  function applyPendingToggle(on) {
-    document.body.classList.toggle('moshava-hide-pending', on);
+  function applyUnacceptedToggle(on) {
+    document.body.classList.toggle('moshava-hide-unaccepted', on);
     syncHidingClass();
     tagAll();
   }
@@ -277,17 +277,17 @@
     const results = document.querySelector(SEL_RESULTS);
     if (!results) return;
 
-    const hideCompleted = document.body.classList.contains('moshava-hide-completed');
-    const hidePending   = document.body.classList.contains('moshava-hide-pending');
-    let administered = 0, pending = 0;
+    const hideCompleted = document.body.classList.contains('moshava-hide-administered');
+    const hideUnaccepted   = document.body.classList.contains('moshava-hide-unaccepted');
+    let administered = 0, unaccepted = 0;
 
     results.querySelectorAll(SEL_MODULE).forEach(m => {
       const isAdmin = isModuleAdministered(m);
-      const isPend  = isModulePending(m);
+      const isUnaccepted  = isModuleUnaccepted(m);
       if (isAdmin) administered++;
-      if (isPend)  pending++;
+      if (isUnaccepted)  unaccepted++;
       m.setAttribute(TAG_ADMINISTERED, isAdmin ? 'true' : 'false');
-      m.setAttribute(TAG_PENDING,      isPend  ? 'true' : 'false');
+      m.setAttribute(TAG_UNACCEPTED,      isUnaccepted  ? 'true' : 'false');
     });
 
     if (HIDE_EMPTY_PERSONS) {
@@ -296,7 +296,7 @@
         if (!mods.length) { p.removeAttribute(TAG_PERSON_EMPTY); return; }
         const allHidden = mods.every(m =>
           (hideCompleted && isModuleAdministered(m)) ||
-          (hidePending   && isModulePending(m))
+          (hideUnaccepted   && isModuleUnaccepted(m))
         );
         allHidden
           ? p.setAttribute(TAG_PERSON_EMPTY, 'true')
@@ -320,12 +320,12 @@
       });
     }
 
-    updateCounts(administered, pending);
+    updateCounts(administered, unaccepted);
   }
 
-  function updateCounts(administered, pending) {
-    const hideBtn    = document.getElementById('moshava-hide-toggle');
-    const pendingBtn = document.getElementById('moshava-hide-pending-toggle');
+  function updateCounts(administered, unaccepted) {
+    const hideBtn    = document.getElementById('moshava-hide-administered-toggle');
+    const unacceptedBtn = document.getElementById('moshava-hide-unaccepted-toggle');
 
     const hideCount = hideBtn?.querySelector('.moshava-count');
     if (hideCount) {
@@ -333,10 +333,10 @@
       hideCount.textContent = (on && administered > 0) ? `(${administered})` : '';
     }
 
-    const pendingCount = pendingBtn?.querySelector('.moshava-count');
-    if (pendingCount) {
-      const on = pendingBtn.classList.contains('active');
-      pendingCount.textContent = (on && pending > 0) ? `(${pending})` : '';
+    const unacceptedCount = unacceptedBtn?.querySelector('.moshava-count');
+    if (unacceptedCount) {
+      const on = unacceptedBtn.classList.contains('active');
+      unacceptedCount.textContent = (on && pending > 0) ? `(${pending})` : '';
     }
   }
 
@@ -347,35 +347,35 @@
     if (!results) return;
 
     const savedCompleted = GM_getValue(STORAGE_KEY, false);
-    const savedPending   = GM_getValue(STORAGE_KEY_PENDING, false);
+    const savedUnaccepted   = GM_getValue(STORAGE_KEY_UNACCEPTED, false);
 
     const toolbar = document.createElement('div');
     toolbar.id = 'moshava-toolbar';
 
-    // Hide completed
+    // Hide administered
     const hideBtn = document.createElement('button');
-    hideBtn.id = 'moshava-hide-toggle';
+    hideBtn.id = 'moshava-hide-administered-toggle';
     if (savedCompleted) hideBtn.classList.add('active');
     const hideCount = document.createElement('span');
     hideCount.className = 'moshava-count';
-    hideBtn.append(document.createTextNode('Hide completed '), hideCount);
+    hideBtn.append(document.createTextNode('Hide administered '), hideCount);
     hideBtn.addEventListener('click', () => {
       const on = hideBtn.classList.toggle('active');
       GM_setValue(STORAGE_KEY, on);
       applyToggle(on);
     });
 
-    // Hide unapproved
-    const pendingBtn = document.createElement('button');
-    pendingBtn.id = 'moshava-hide-pending-toggle';
-    if (savedPending) pendingBtn.classList.add('active');
-    const pendingCount = document.createElement('span');
-    pendingCount.className = 'moshava-count';
-    pendingBtn.append(document.createTextNode('Hide unapproved '), pendingCount);
-    pendingBtn.addEventListener('click', () => {
-      const on = pendingBtn.classList.toggle('active');
-      GM_setValue(STORAGE_KEY_PENDING, on);
-      applyPendingToggle(on);
+    // Hide unaccepted
+    const unacceptedBtn = document.createElement('button');
+    unacceptedBtn.id = 'moshava-hide-unaccepted-toggle';
+    if (savedUnaccepted) unacceptedBtn.classList.add('active');
+    const unacceptedCount = document.createElement('span');
+    unacceptedCount.className = 'moshava-count';
+    unacceptedBtn.append(document.createTextNode('Hide unaccepted '), unacceptedCount);
+    unacceptedBtn.addEventListener('click', () => {
+      const on = unacceptedBtn.classList.toggle('active');
+      GM_setValue(STORAGE_KEY_UNACCEPTED, on);
+      applyUnacceptedToggle(on);
     });
 
     // Today button
@@ -406,12 +406,12 @@
       pillsWrap.appendChild(pill);
     });
 
-    toolbar.append(hideBtn, pendingBtn, todayBtn, sep, timeLabel, pillsWrap);
+    toolbar.append(hideBtn, unacceptedBtn, todayBtn, sep, timeLabel, pillsWrap);
     results.parentNode.insertBefore(toolbar, results);
 
     // Initial state
     applyToggle(savedCompleted);
-    applyPendingToggle(savedPending);
+    applyUnacceptedToggle(savedUnaccepted);
     syncTodayBtn();
 
     setTimeout(() => {
