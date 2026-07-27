@@ -8,6 +8,8 @@
 // @grant        GM_setValue
 // @grant        unsafeWindow
 // @run-at       document-idle
+// @updateURL    https://raw.githubusercontent.com/moshavajoshk/cm-emar-filters/main/camp-moshava-emar.user.js
+// @downloadURL  https://raw.githubusercontent.com/moshavajoshk/cm-emar-filters/main/camp-moshava-emar.user.js
 // ==/UserScript==
 
 (function () {
