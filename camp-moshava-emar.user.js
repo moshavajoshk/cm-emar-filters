@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Camp Moshava eMAR – Enhanced Toolbar
 // @namespace    http://campmoshava.org/
-// @version      2.2
+// @version      2.2.1
 // @description  Hide administered/unaccepted toggles, delivery time pills, Today date button
 // @match        https://system.campminder.com/*
 // @grant        GM_getValue
