@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Camp Moshava eMAR – Enhanced Toolbar
 // @namespace    http://campmoshava.org/
-// @version      2.2.2
+// @version      2.2.3
 // @description  Hide administered/unaccepted toggles, delivery time pills, Today date button
 // @match        https://system.campminder.com/*
 // @grant        GM_getValue
@@ -181,7 +181,7 @@
   function selectAll() {
     const checkboxes = getDeliveryCheckboxes();
     checkboxes.filter(cb => !cb.checked).forEach((cb, i) => setTimeout(() => cb.click(), 60 * i));
-    setTimeout(syncPills, 400);
+    setTimeout(() => { syncPills(); triggerRefresh(); }, 400);
   }
 
   function selectDeliveryTime(targetLabel) {
@@ -191,7 +191,7 @@
     checkboxes
       .filter(cb => getLabelText(cb) !== targetLabel && cb.checked)
       .forEach((cb, i) => setTimeout(() => cb.click(), 60 * (i + 1)));
-    setTimeout(syncPills, 400);
+    setTimeout(() => { syncPills(); triggerRefresh(); }, 400);
   }
 
   function syncPills() {
@@ -234,6 +234,22 @@
       }
     }
     setTimeout(syncTodayBtn, 150);
+  }
+
+  function triggerRefresh() {
+    // Fire CampMinder's datepicker onSelect with the current date value.
+    // CampMinder no longer re-runs its filter on checkbox click alone --
+    // this is the same event it responds to when a user picks a date,
+    // and it causes a full filter re-run using the current checkbox state.
+    const input = getDateInput();
+    if (!input) return;
+    const jq = (typeof unsafeWindow !== 'undefined' && unsafeWindow.jQuery)
+      || window.jQuery || window.$;
+    if (!jq) return;
+    const inst = jq(input).data('datepicker');
+    if (inst && typeof inst.settings.onSelect === 'function') {
+      inst.settings.onSelect.call(input, input.value, inst);
+    }
   }
 
   function syncTodayBtn() {
@@ -336,7 +352,7 @@
     const unacceptedCount = unacceptedBtn?.querySelector('.moshava-count');
     if (unacceptedCount) {
       const on = unacceptedBtn.classList.contains('active');
-      unacceptedCount.textContent = (on && pending > 0) ? `(${pending})` : '';
+      unacceptedCount.textContent = (on && unaccepted > 0) ? `(${unaccepted})` : '';
     }
   }
 
@@ -358,7 +374,7 @@
     if (savedCompleted) hideBtn.classList.add('active');
     const hideCount = document.createElement('span');
     hideCount.className = 'moshava-count';
-    hideBtn.append(document.createTextNode('Hide administered '), hideCount);
+    hideBtn.append(document.createTextNode('Hide Administered '), hideCount);
     hideBtn.addEventListener('click', () => {
       const on = hideBtn.classList.toggle('active');
       GM_setValue(STORAGE_KEY, on);
@@ -371,7 +387,7 @@
     if (savedUnaccepted) unacceptedBtn.classList.add('active');
     const unacceptedCount = document.createElement('span');
     unacceptedCount.className = 'moshava-count';
-    unacceptedBtn.append(document.createTextNode('Hide unaccepted '), unacceptedCount);
+    unacceptedBtn.append(document.createTextNode('Hide Unaccepted '), unacceptedCount);
     unacceptedBtn.addEventListener('click', () => {
       const on = unacceptedBtn.classList.toggle('active');
       GM_setValue(STORAGE_KEY_UNACCEPTED, on);
